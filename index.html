@@ -3,775 +3,578 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Word Editor - Click & Edit PDF</title>
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <title>PDF Text Editor</title>
     
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fontsource-helvetica-neue@4.0.0/index.css">
+
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Inter', sans-serif;
-            background: #eef2f7;
-            min-height: 100vh;
+            font-family: 'Helvetica Neue', sans-serif;
+            background-color: #f3f4f6;
         }
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        
-        .header {
+        .canvas-container {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            margin: 0 auto;
+            position: relative;
             background: white;
-            border-radius: 16px;
-            padding: 14px 24px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #e2e8f0;
-            flex-wrap: wrap;
-            gap: 12px;
         }
-        .logo { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
-        .logo i { color: #2563eb; }
-        .logo span { color: #2563eb; }
-        
-        .upload-bar {
-            background: white;
-            border-radius: 16px;
-            padding: 12px 20px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border: 1px solid #e2e8f0;
-            flex-wrap: wrap;
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
-        .upload-bar .btn {
-            padding: 8px 20px;
-            border: none;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: inherit;
-            background: #2563eb;
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .tool-btn {
+            transition: all 0.2s;
+        }
+        .tool-btn:hover {
+            transform: translateY(-1px);
+        }
+        .tool-btn.active {
+            background-color: #3b82f6;
             color: white;
-            transition: 0.2s;
-        }
-        .upload-bar .btn:hover { background: #1d4ed8; }
-        .upload-bar .btn-success { background: #10b981; }
-        .upload-bar .btn-success:hover { background: #059669; }
-        .upload-bar .btn-danger { background: #ef4444; }
-        .upload-bar .btn-danger:hover { background: #dc2626; }
-        .upload-bar .file-name { font-size: 14px; color: #64748b; }
-        
-        .editor-area {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            border: 1px solid #e2e8f0;
-            min-height: 700px;
-        }
-        
-        .pdf-container {
-            position: relative;
-            min-height: 600px;
-            background: #f8fafc;
-            border-radius: 12px;
-            overflow: auto;
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-        }
-        
-        .pdf-page-wrapper {
-            position: relative;
-            display: inline-block;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            border-radius: 4px;
-        }
-        
-        .pdf-page-wrapper canvas {
-            display: block;
-            border-radius: 4px;
-            max-width: 100%;
-            height: auto;
-        }
-        
-        .editable-text {
-            position: absolute;
-            cursor: text;
-            padding: 4px 6px;
-            border: 2px dashed transparent;
-            border-radius: 4px;
-            min-width: 30px;
-            min-height: 28px;
-            background: rgba(255,255,255,0.85);
-            color: #1a2634;
-            font-family: 'Inter', sans-serif;
-            outline: none;
-            font-size: 14px;
-            line-height: 1.4;
-            word-break: break-word;
-            max-width: 500px;
-            box-shadow: 0 0 0 1px rgba(37,99,235,0);
-            transition: box-shadow 0.2s;
-        }
-        .editable-text:hover {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
-        }
-        .editable-text:focus {
-            border-color: #2563eb;
-            background: rgba(255,255,255,0.98);
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.25);
-        }
-        .editable-text.dragging {
-            border-color: #f59e0b;
-            cursor: move;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            background: rgba(255,255,255,0.95);
-        }
-        .editable-text.selected {
-            border-color: #2563eb;
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.3);
-        }
-        
-        .toolbar-float {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 10px 16px;
-            margin-bottom: 16px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            align-items: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-        }
-        .toolbar-float .btn-icon {
-            width: 34px; height: 34px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            background: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-            transition: 0.15s;
-        }
-        .toolbar-float .btn-icon:hover { background: #f1f5f9; }
-        .toolbar-float .btn-icon.active { background: #2563eb; color: white; border-color: #2563eb; }
-        .toolbar-float select { padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 13px; background: white; }
-        .toolbar-float input[type="color"] { width: 34px; height: 34px; padding: 2px; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; }
-        .toolbar-float .separator { width: 1px; height: 28px; background: #e2e8f0; }
-        
-        .page-controls {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 16px;
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid #e2e8f0;
-        }
-        .page-controls button {
-            padding: 6px 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 30px;
-            background: white;
-            cursor: pointer;
-            font-size: 13px;
-            transition: 0.15s;
-        }
-        .page-controls button:hover { background: #f1f5f9; }
-        .page-controls span { font-size: 14px; color: #475569; }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.7);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .loading-content { background: white; padding: 30px; border-radius: 20px; text-align: center; }
-        .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #2563eb;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 15px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        
-        .empty-state { text-align: center; color: #94a3b8; padding: 60px 20px; }
-        .empty-state i { font-size: 64px; margin-bottom: 16px; }
-        
-        .result-box {
-            margin-top: 16px;
-            padding: 16px;
-            background: #ecfdf5;
-            border-radius: 12px;
-            text-align: center;
-            display: none;
-        }
-        .result-box.show { display: block; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        @media (max-width: 768px) {
-            .upload-bar { flex-direction: column; align-items: stretch; }
-            .toolbar-float { justify-content: center; }
+            border-color: #3b82f6;
         }
     </style>
 </head>
-<body>
-<div class="container">
-    <div class="header">
-        <div class="logo"><i class="fas fa-file-pdf"></i> PDF<span>Word</span></div>
-        <div style="font-size: 13px; color: #64748b;"><i class="fas fa-mouse-pointer"></i> Click on PDF to add text • Drag to move</div>
-    </div>
+<body class="h-screen flex flex-col overflow-hidden text-slate-800">
 
-    <div class="upload-bar">
-        <button class="btn" onclick="document.getElementById('pdfInput').click()">
-            <i class="fas fa-upload"></i> Upload PDF
-        </button>
-        <input type="file" id="pdfInput" accept=".pdf" style="display:none">
-        <span class="file-name" id="fileName">📄 No file loaded</span>
-        <button class="btn btn-success" id="downloadBtn" onclick="downloadPDF()" disabled>
-            <i class="fas fa-download"></i> Download PDF
-        </button>
-        <button class="btn btn-danger" onclick="clearAllTexts()" disabled id="clearBtn">
-            <i class="fas fa-eraser"></i> Clear All Text
-        </button>
-        <span style="font-size:12px; color:#94a3b8; margin-left:auto;" id="textCount">📝 0 text boxes</span>
-    </div>
-
-    <div class="editor-area">
-        <div class="toolbar-float" id="toolbar">
-            <button class="btn-icon" id="btnBold" onclick="applyStyle('bold')" title="Bold"><b>B</b></button>
-            <button class="btn-icon" id="btnItalic" onclick="applyStyle('italic')" title="Italic"><i>I</i></button>
-            <button class="btn-icon" id="btnUnderline" onclick="applyStyle('underline')" title="Underline"><u>U</u></button>
-            <div class="separator"></div>
-            <select id="fontSizeSelect" onchange="applyStyle('size')">
-                <option value="10">10</option>
-                <option value="12">12</option>
-                <option value="14">14</option>
-                <option value="16" selected>16</option>
-                <option value="18">18</option>
-                <option value="20">20</option>
-                <option value="24">24</option>
-                <option value="28">28</option>
-                <option value="32">32</option>
-                <option value="36">36</option>
-                <option value="40">40</option>
-                <option value="48">48</option>
-                <option value="56">56</option>
-                <option value="64">64</option>
-            </select>
-            <div class="separator"></div>
-            <input type="color" id="colorPicker" value="#000000" onchange="applyStyle('color')">
-            <div class="separator"></div>
-            <button class="btn-icon" onclick="deleteSelectedText()" title="Delete selected"><i class="fas fa-trash"></i></button>
-            <span style="font-size:12px; color:#94a3b8; margin-left:auto;" id="selectedInfo">Selected: None</span>
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center shadow-sm z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">P</div>
+            <h1 class="text-xl font-semibold tracking-tight">PDF Text Editor</h1>
         </div>
+        <div class="flex gap-3">
+            <label for="file-upload" class="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Upload PDF
+            </label>
+            <input id="file-upload" type="file" accept=".pdf" class="hidden">
+            
+            <button id="download-btn" disabled class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download PDF
+            </button>
+        </div>
+    </header>
 
-        <div id="pdfContainer" class="pdf-container">
-            <div class="empty-state">
-                <i class="fas fa-file-pdf"></i>
-                <p>Upload a PDF to start editing</p>
-                <p style="font-size:13px; margin-top:8px;">Click anywhere on the page to add text</p>
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Sidebar Controls -->
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto z-10">
+            <div class="p-6 space-y-6">
+                
+                <!-- Page Selector -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Page Selection</label>
+                    <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                        <span class="text-slate-500 text-sm ml-2">Page</span>
+                        <input type="number" id="page-num" value="1" min="1" class="w-16 bg-transparent font-semibold text-center focus:outline-none text-slate-800">
+                        <span class="text-slate-400 text-sm">of <span id="page-count">--</span></span>
+                    </div>
+                </div>
+
+                <!-- Text Input -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Text Content</label>
+                    <textarea id="text-input" rows="4" placeholder="Type your text here..." class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none text-sm"></textarea>
+                </div>
+
+                <!-- Formatting Toolbar -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Formatting</label>
+                    <div class="grid grid-cols-4 gap-2 mb-3">
+                        <button id="btn-bold" class="tool-btn border border-slate-200 rounded p-2 text-slate-600 hover:bg-slate-50 flex justify-center items-center" title="Bold">
+                            <span class="font-bold">B</span>
+                        </button>
+                        <button id="btn-italic" class="tool-btn border border-slate-200 rounded p-2 text-slate-600 hover:bg-slate-50 flex justify-center items-center" title="Italic">
+                            <span class="italic">I</span>
+                        </button>
+                        <button id="btn-underline" class="tool-btn border border-slate-200 rounded p-2 text-slate-600 hover:bg-slate-50 flex justify-center items-center" title="Underline">
+                            <span class="underline">U</span>
+                        </button>
+                        <div class="relative group">
+                            <button class="w-full h-full border border-slate-200 rounded p-2 bg-white flex justify-center items-center hover:bg-slate-50">
+                                <div id="color-preview" class="w-4 h-4 rounded-full bg-black border border-slate-300"></div>
+                            </button>
+                            <input type="color" id="color-picker" value="#000000" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full">
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        <select id="font-size" class="flex-1 p-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500">
+                            <option value="12">12px</option>
+                            <option value="14">14px</option>
+                            <option value="16" selected>16px</option>
+                            <option value="18">18px</option>
+                            <option value="24">24px</option>
+                            <option value="32">32px</option>
+                            <option value="48">48px</option>
+                            <option value="64">64px</option>
+                        </select>
+                        <select id="alignment" class="flex-1 p-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500">
+                            <option value="left">Left</option>
+                            <option value="center">Center</option>
+                            <option value="right">Right</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Position Controls -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Position (X, Y)</label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-2.5 text-slate-400 text-xs">X</span>
+                            <input type="number" id="pos-x" value="50" class="w-full pl-8 pr-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-2.5 text-slate-400 text-xs">Y</span>
+                            <input type="number" id="pos-y" value="50" class="w-full pl-8 pr-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">Coordinates are in pixels from bottom-left.</p>
+                </div>
+
+                <!-- Apply Button -->
+                <button id="apply-btn" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-medium shadow-lg shadow-slate-200 transition-all active:scale-95 flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Add Text to Page
+                </button>
+
             </div>
-        </div>
+            
+            <div class="mt-auto p-4 border-t border-slate-100 bg-slate-50">
+                <div class="text-xs text-slate-500 text-center">
+                    Preview is for visualization only.<br>Final output generated on download.
+                </div>
+            </div>
+        </aside>
 
-        <div class="page-controls">
-            <button onclick="changePage(-1)" id="prevPageBtn"><i class="fas fa-chevron-left"></i> Previous</button>
-            <span id="pageInfo">Page 1 of 1</span>
-            <button onclick="changePage(1)" id="nextPageBtn">Next <i class="fas fa-chevron-right"></i></button>
-        </div>
+        <!-- PDF Viewer Area -->
+        <section class="flex-1 bg-slate-100 overflow-auto flex justify-center p-8 relative" id="viewer-container">
+            <div id="empty-state" class="flex flex-col items-center justify-center h-full text-slate-400">
+                <svg class="w-16 h-16 mb-4 opacity-50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p class="text-lg font-medium">No PDF loaded</p>
+                <p class="text-sm">Upload a PDF file to start editing</p>
+            </div>
+            
+            <div id="canvas-wrapper" class="hidden relative">
+                <canvas id="the-canvas" class="border border-slate-300"></canvas>
+                <!-- Overlay for visual feedback of added text could go here, but we'll just redraw canvas or use simple overlay -->
+                <div id="preview-overlay" class="absolute pointer-events-none border border-dashed border-blue-400 bg-blue-50/50 px-2 py-1 text-sm hidden" style="transform-origin: bottom left;">
+                    Preview Text
+                </div>
+            </div>
+        </section>
 
-        <div id="resultBox" class="result-box"></div>
-    </div>
-</div>
+    </main>
 
-<div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-content">
-        <div class="spinner"></div>
-        <h3 id="loadingMessage">Processing...</h3>
-        <p id="loadingDetail">Please wait</p>
-    </div>
-</div>
+    <script>
+        // --- Configuration & State ---
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-<script>
-    const pdfjsLib = window['pdfjs-dist/build/pdf'];
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        let pdfDoc = null;
+        let pdfBytes = null;
+        let pageNum = 1;
+        let pageRendering = false;
+        let pageNumPending = null;
+        let scale = 1.5;
+        let canvas = document.getElementById('the-canvas');
+        let ctx = canvas.getContext('2d');
+        
+        // Store modifications per page: { pageIndex: [ {text, x, y, styles} ] }
+        let modifications = {}; 
 
-    let pdfDoc = null;
-    let currentPage = 1;
-    let totalPages = 0;
-    let pdfBytes = null;
-    let currentFile = null;
-    let textElements = [];
-    let selectedElement = null;
-    let isDragging = false;
-    let dragOffsetX = 0, dragOffsetY = 0;
-    let textIdCounter = 1;
+        // UI Elements
+        const fileInput = document.getElementById('file-upload');
+        const downloadBtn = document.getElementById('download-btn');
+        const pageNumInput = document.getElementById('page-num');
+        const pageCountSpan = document.getElementById('page-count');
+        const emptyState = document.getElementById('empty-state');
+        const canvasWrapper = document.getElementById('canvas-wrapper');
+        const previewOverlay = document.getElementById('preview-overlay');
+        
+        // Inputs
+        const textInput = document.getElementById('text-input');
+        const fontSizeSelect = document.getElementById('font-size');
+        const colorPicker = document.getElementById('color-picker');
+        const colorPreview = document.getElementById('color-preview');
+        const alignSelect = document.getElementById('alignment');
+        const posXInput = document.getElementById('pos-x');
+        const posYInput = document.getElementById('pos-y');
+        
+        // Toggles
+        const btnBold = document.getElementById('btn-bold');
+        const btnItalic = document.getElementById('btn-italic');
+        const btnUnderline = document.getElementById('btn-underline');
 
-    // Upload PDF
-    document.getElementById('pdfInput').onchange = async function(e) {
-        if(!e.target.files[0]) return;
-        currentFile = e.target.files[0];
-        document.getElementById('fileName').textContent = '📄 ' + currentFile.name;
-        
-        showLoading('Loading PDF...');
-        
-        const arrayBuffer = await currentFile.arrayBuffer();
-        pdfBytes = arrayBuffer;
-        pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
-        totalPages = pdfDoc.getPageCount();
-        
-        document.getElementById('downloadBtn').disabled = false;
-        document.getElementById('clearBtn').disabled = false;
-        document.getElementById('pageInfo').textContent = `Page 1 of ${totalPages}`;
-        
-        // Reset text elements when new PDF loaded
-        textElements = [];
-        selectedElement = null;
-        updateTextCount();
-        
-        await renderPage(currentPage);
-        hideLoading();
-    };
-
-    async function renderPage(pageNum) {
-        if(!currentFile) return;
-        const container = document.getElementById('pdfContainer');
-        container.innerHTML = '<div style="text-align:center; padding:40px;"><div class="spinner" style="width:30px; height:30px;"></div><p>Loading page...</p></div>';
-        
-        try {
-            const arrayBuffer = await currentFile.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            const page = await pdf.getPage(pageNum);
-            const viewport = page.getViewport({ scale: 1.2 });
-            
-            const wrapper = document.createElement('div');
-            wrapper.className = 'pdf-page-wrapper';
-            wrapper.style.position = 'relative';
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            canvas.style.width = viewport.width + 'px';
-            canvas.style.height = viewport.height + 'px';
-            
-            const context = canvas.getContext('2d');
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            
-            wrapper.appendChild(canvas);
-            
-            // Add existing text elements for this page
-            const pageTexts = textElements.filter(el => el.page === pageNum);
-            pageTexts.forEach(el => {
-                const div = createTextElement(el);
-                wrapper.appendChild(div);
-            });
-            
-            container.innerHTML = '';
-            container.appendChild(wrapper);
-            
-            // Click to add text - on canvas only
-            canvas.style.cursor = 'crosshair';
-            canvas.addEventListener('click', function(e) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                addTextAt(x, y, pageNum);
-            });
-            
-            document.getElementById('pageInfo').textContent = `Page ${pageNum} of ${totalPages}`;
-            document.getElementById('prevPageBtn').disabled = pageNum <= 1;
-            document.getElementById('nextPageBtn').disabled = pageNum >= totalPages;
-            
-            updateTextCount();
-            
-        } catch(e) {
-            console.error('Render error:', e);
-            container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading page: ${e.message}</p></div>`;
-        }
-    }
-
-    // Create a text element div
-    function createTextElement(data) {
-        const div = document.createElement('div');
-        div.className = 'editable-text';
-        div.contentEditable = true;
-        div.textContent = data.text || 'Type here...';
-        div.style.left = data.x + 'px';
-        div.style.top = data.y + 'px';
-        div.style.fontSize = data.size + 'px';
-        div.style.color = data.color || '#000000';
-        div.style.fontWeight = data.bold ? 'bold' : 'normal';
-        div.style.fontStyle = data.italic ? 'italic' : 'normal';
-        div.style.textDecoration = data.underline ? 'underline' : 'none';
-        div.dataset.id = data.id;
-        div.dataset.page = data.page;
-        
-        div.addEventListener('click', function(e) {
-            e.stopPropagation();
-            selectTextElement(this);
-        });
-        
-        div.addEventListener('mousedown', function(e) {
-            startDrag(e, this);
-        });
-        
-        div.addEventListener('input', function(e) {
-            updateTextData(this);
-        });
-        
-        div.addEventListener('blur', function(e) {
-            updateTextData(this);
-            this.classList.remove('selected');
-        });
-        
-        div.addEventListener('focus', function(e) {
-            selectTextElement(this);
-        });
-        
-        return div;
-    }
-
-    // Add text at position
-    function addTextAt(x, y, pageNum) {
-        const id = textIdCounter++;
-        const newText = {
-            id: id,
-            page: pageNum,
-            x: x,
-            y: y,
-            text: 'Type here...',
-            size: 16,
-            color: '#000000',
+        let currentStyles = {
             bold: false,
             italic: false,
-            underline: false
+            underline: false,
+            color: '#000000',
+            size: 16,
+            align: 'left'
         };
-        textElements.push(newText);
-        
-        const wrapper = document.querySelector('.pdf-page-wrapper');
-        if(!wrapper) return;
-        
-        const div = createTextElement(newText);
-        wrapper.appendChild(div);
-        
-        // Focus after a moment
-        setTimeout(() => {
-            div.focus();
-            // Select all text
-            const range = document.createRange();
-            range.selectNodeContents(div);
-            const sel = window.getSelection();
-            sel.removeAllRanges();
-            sel.addRange(range);
-        }, 100);
-        
-        selectTextElement(div);
-        updateTextCount();
-    }
 
-    // Select text element
-    function selectTextElement(element) {
-        // Remove previous selection
-        if(selectedElement) {
-            selectedElement.classList.remove('selected');
-        }
-        selectedElement = element;
-        if(element) {
-            element.classList.add('selected');
-            const data = textElements.find(el => el.id === parseInt(element.dataset.id));
-            if(data) {
-                document.getElementById('colorPicker').value = data.color || '#000000';
-                document.getElementById('fontSizeSelect').value = data.size || 16;
-                document.getElementById('btnBold').classList.toggle('active', data.bold || false);
-                document.getElementById('btnItalic').classList.toggle('active', data.italic || false);
-                document.getElementById('btnUnderline').classList.toggle('active', data.underline || false);
-                document.getElementById('selectedInfo').textContent = `Selected: "${data.text.substring(0, 20)}${data.text.length > 20 ? '...' : ''}"`;
+        // --- Event Listeners ---
+
+        // File Upload
+        fileInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                const reader = new FileReader();
+                reader.onload = async function(ev) {
+                    pdfBytes = new Uint8Array(ev.target.result);
+                    await loadPdf(pdfBytes);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert('Please upload a valid PDF file.');
             }
-        } else {
-            document.getElementById('selectedInfo').textContent = 'Selected: None';
-        }
-    }
+        });
 
-    // Update text data on edit
-    function updateTextData(element) {
-        const data = textElements.find(el => el.id === parseInt(element.dataset.id));
-        if(data) {
-            data.text = element.textContent || '';
-            updateTextCount();
-        }
-    }
+        // Style Toggles
+        const toggleStyle = (key, btn) => {
+            currentStyles[key] = !currentStyles[key];
+            btn.classList.toggle('active', currentStyles[key]);
+            updatePreview();
+        };
 
-    // Start drag
-    function startDrag(e, element) {
-        if(e.target !== element) return;
-        const rect = element.getBoundingClientRect();
-        dragOffsetX = e.clientX - rect.left;
-        dragOffsetY = e.clientY - rect.top;
-        isDragging = true;
-        element.classList.add('dragging');
-        
-        function onMouseMove(ev) {
-            if(!isDragging) return;
-            const container = document.querySelector('.pdf-page-wrapper');
-            if(!container) return;
-            const containerRect = container.getBoundingClientRect();
-            const canvas = container.querySelector('canvas');
-            if(!canvas) return;
-            const scaleX = canvas.width / canvas.clientWidth;
-            const scaleY = canvas.height / canvas.clientHeight;
+        btnBold.addEventListener('click', () => toggleStyle('bold', btnBold));
+        btnItalic.addEventListener('click', () => toggleStyle('italic', btnItalic));
+        btnUnderline.addEventListener('click', () => toggleStyle('underline', btnUnderline));
+
+        // Other Inputs
+        colorPicker.addEventListener('input', (e) => {
+            currentStyles.color = e.target.value;
+            colorPreview.style.backgroundColor = e.target.value;
+            updatePreview();
+        });
+
+        fontSizeSelect.addEventListener('change', (e) => {
+            currentStyles.size = parseInt(e.target.value);
+            updatePreview();
+        });
+
+        alignSelect.addEventListener('change', (e) => {
+            currentStyles.align = e.target.value;
+            updatePreview();
+        });
+
+        [textInput, posXInput, posYInput].forEach(el => {
+            el.addEventListener('input', updatePreview);
+        });
+
+        // Page Navigation
+        pageNumInput.addEventListener('change', (e) => {
+            const val = parseInt(e.target.value);
+            if (val >= 1 && val <= pdfDoc.numPages) {
+                queueRenderPage(val);
+            }
+        });
+
+        // Apply Button (Visual Only for now, logic happens on Download)
+        document.getElementById('apply-btn').addEventListener('click', () => {
+            if (!pdfDoc) return;
             
-            const newX = (ev.clientX - containerRect.left - dragOffsetX) * scaleX;
-            const newY = (ev.clientY - containerRect.top - dragOffsetY) * scaleY;
+            // Save current input to memory for this page
+            if (!modifications[pageNum]) modifications[pageNum] = [];
             
-            element.style.left = Math.max(0, newX) + 'px';
-            element.style.top = Math.max(0, newY) + 'px';
+            // We don't actually "burn" it into the canvas immediately permanently, 
+            // but we can add a visual marker or just rely on the live preview.
+            // For this implementation, the "Apply" button confirms the settings 
+            // and maybe adds a persistent marker if we wanted complex layering.
+            // Here, we will just trigger the download logic preparation or alert success.
             
-            const data = textElements.find(el => el.id === parseInt(element.dataset.id));
-            if(data) {
-                data.x = Math.max(0, newX);
-                data.y = Math.max(0, newY);
+            // Let's make it feel responsive: Flash the preview
+            previewOverlay.style.borderColor = '#22c55e'; // Green
+            setTimeout(() => {
+                previewOverlay.style.borderColor = '#60a5fa'; // Back to blue
+            }, 300);
+            
+            // In a real app, we might push this specific state to an array of "stamps"
+            // But for simplicity, we treat the inputs as the "current stamp" to be applied on download.
+            // To support multiple texts, we'd need a list. Let's assume single text per page for simplicity 
+            // OR append to the list. Let's append.
+            
+            modifications[pageNum].push({
+                text: textInput.value,
+                x: parseInt(posXInput.value),
+                y: parseInt(posYInput.value),
+                ...currentStyles
+            });
+            
+            // Clear input for next entry? Or keep it? Let's keep it but maybe clear text.
+            // textInput.value = ''; 
+            // updatePreview();
+            
+            renderPage(pageNum); // Re-render to show "burned in" look if we wanted, 
+                                 // but currently renderPage draws raw PDF. 
+                                 // We need to draw modifications on canvas too.
+        });
+
+        // Download
+        downloadBtn.addEventListener('click', generateAndDownloadPdf);
+
+
+        // --- Core Functions ---
+
+        async function loadPdf(data) {
+            try {
+                pdfDoc = await pdfjsLib.getDocument({ data: data }).promise;
+                pageCountSpan.textContent = pdfDoc.numPages;
+                pageNum = 1;
+                pageNumInput.value = 1;
+                
+                emptyState.classList.add('hidden');
+                canvasWrapper.classList.remove('hidden');
+                downloadBtn.disabled = false;
+                
+                renderPage(pageNum);
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                alert('Failed to load PDF.');
             }
         }
-        
-        function onMouseUp() {
-            isDragging = false;
-            element.classList.remove('dragging');
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-        }
-        
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-        e.preventDefault();
-    }
 
-    // Apply style to selected text
-    function applyStyle(type) {
-        if(!selectedElement) {
-            showToast('Click on a text box first to edit it', 'warning');
-            return;
+        function queueRenderPage(num) {
+            if (pageRendering) {
+                pageNumPending = num;
+            } else {
+                renderPage(num);
+            }
         }
-        const data = textElements.find(el => el.id === parseInt(selectedElement.dataset.id));
-        if(!data) return;
-        
-        switch(type) {
-            case 'bold':
-                data.bold = !data.bold;
-                selectedElement.style.fontWeight = data.bold ? 'bold' : 'normal';
-                document.getElementById('btnBold').classList.toggle('active');
-                break;
-            case 'italic':
-                data.italic = !data.italic;
-                selectedElement.style.fontStyle = data.italic ? 'italic' : 'normal';
-                document.getElementById('btnItalic').classList.toggle('active');
-                break;
-            case 'underline':
-                data.underline = !data.underline;
-                selectedElement.style.textDecoration = data.underline ? 'underline' : 'none';
-                document.getElementById('btnUnderline').classList.toggle('active');
-                break;
-            case 'size':
-                const size = parseInt(document.getElementById('fontSizeSelect').value);
-                data.size = size;
-                selectedElement.style.fontSize = size + 'px';
-                break;
-            case 'color':
-                const color = document.getElementById('colorPicker').value;
-                data.color = color;
-                selectedElement.style.color = color;
-                break;
-        }
-        updateTextCount();
-    }
 
-    // Delete selected text
-    function deleteSelectedText() {
-        if(!selectedElement) {
-            showToast('Select a text box first', 'warning');
-            return;
-        }
-        const id = parseInt(selectedElement.dataset.id);
-        textElements = textElements.filter(el => el.id !== id);
-        selectedElement.remove();
-        selectedElement = null;
-        document.getElementById('selectedInfo').textContent = 'Selected: None';
-        updateTextCount();
-        showToast('Text deleted', 'success');
-    }
-
-    // Clear all text on current page
-    function clearAllTexts() {
-        if(textElements.length === 0) {
-            showToast('No text to clear', 'info');
-            return;
-        }
-        if(!confirm('Remove all text from this page?')) return;
-        textElements = textElements.filter(el => el.page !== currentPage);
-        renderPage(currentPage);
-        updateTextCount();
-        showToast('All text cleared', 'success');
-    }
-
-    // Change page
-    function changePage(delta) {
-        const newPage = currentPage + delta;
-        if(newPage >= 1 && newPage <= totalPages) {
-            currentPage = newPage;
-            renderPage(currentPage);
-        }
-    }
-
-    // Download PDF with applied text
-    async function downloadPDF() {
-        if(!pdfDoc) {
-            showToast('Please upload a PDF first', 'warning');
-            return;
-        }
-        
-        showLoading('Generating PDF with text...');
-        
-        try {
-            const newDoc = await PDFLib.PDFDocument.create();
+        async function renderPage(num) {
+            pageRendering = true;
             
-            // Get pages from original PDF
-            const pages = await newDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
+            // Fetch page
+            const page = await pdfDoc.getPage(num);
             
-            // Add all text elements to the new PDF
-            for(let i = 0; i < pages.length; i++) {
-                const page = pages[i];
-                const pageNum = i + 1;
+            // Calculate viewport
+            const viewport = page.getViewport({ scale: scale });
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            // Render PDF page into canvas context
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport
+            };
+            
+            await page.render(renderContext).promise;
+            
+            // Draw any existing modifications for this page on top of the canvas
+            drawModificationsOnCanvas(num, viewport);
+
+            pageRendering = false;
+            
+            if (pageNumPending !== null) {
+                renderPage(pageNumPending);
+                pageNumPending = null;
+            }
+        }
+
+        function drawModificationsOnCanvas(pageIdx, viewport) {
+            const mods = modifications[pageIdx];
+            if (!mods || mods.length === 0) return;
+
+            ctx.save();
+            
+            mods.forEach(mod => {
+                // PDF coordinates: (0,0) is bottom-left. 
+                // Canvas coordinates: (0,0) is top-left.
+                // We need to convert.
+                // However, our inputs X/Y are user-defined "pixels from bottom-left".
+                // So we map directly.
                 
-                // Get text for this page
-                const pageTexts = textElements.filter(el => el.page === pageNum);
+                const x = mod.x * scale; // Scale up user input to match canvas scale
+                // Y needs inversion relative to canvas height
+                const y = viewport.height - (mod.y * scale); 
+
+                ctx.font = `${mod.italic ? 'italic' : ''} ${mod.bold ? 'bold' : ''} ${mod.size * scale}px Helvetica`;
+                ctx.fillStyle = mod.color;
+                ctx.textBaseline = 'bottom'; // Align to bottom of Y coordinate
                 
-                for(const el of pageTexts) {
-                    try {
-                        // Embed font
-                        const font = await newDoc.embedFont('Helvetica');
+                // Simple alignment handling for canvas drawing
+                if (mod.align === 'center') {
+                    ctx.textAlign = 'center';
+                } else if (mod.align === 'right') {
+                    ctx.textAlign = 'right';
+                } else {
+                    ctx.textAlign = 'left';
+                }
+
+                ctx.fillText(mod.text, x, y);
+                
+                if (mod.underline) {
+                    const metrics = ctx.measureText(mod.text);
+                    const width = metrics.width;
+                    const height = mod.size * scale; // approx
+                    
+                    ctx.beginPath();
+                    ctx.strokeStyle = mod.color;
+                    ctx.lineWidth = 1;
+                    // Adjust line position based on alignment
+                    let startX = x;
+                    if (mod.align === 'center') startX = x - width/2;
+                    if (mod.align === 'right') startX = x - width;
+                    
+                    ctx.moveTo(startX, y + 2); // slightly below baseline
+                    ctx.lineTo(startX + width, y + 2);
+                    ctx.stroke();
+                }
+            });
+            
+            ctx.restore();
+        }
+
+        function updatePreview() {
+            if (!pdfDoc) return;
+            
+            // Update the floating HTML overlay for immediate feedback without full re-render
+            const text = textInput.value;
+            if (!text) {
+                previewOverlay.classList.add('hidden');
+                return;
+            }
+            
+            previewOverlay.classList.remove('hidden');
+            previewOverlay.textContent = text;
+            
+            // Styles
+            previewOverlay.style.fontSize = `${currentStyles.size}px`;
+            previewOverlay.style.color = currentStyles.color;
+            previewOverlay.style.fontWeight = currentStyles.bold ? 'bold' : 'normal';
+            previewOverlay.style.fontStyle = currentStyles.italic ? 'italic' : 'normal';
+            previewOverlay.style.textDecoration = currentStyles.underline ? 'underline' : 'none';
+            previewOverlay.style.textAlign = currentStyles.align;
+            
+            // Position
+            // The canvas is scaled by `scale`. The inputs are logical pixels.
+            // We need to position the overlay div absolutely within the wrapper.
+            // Wrapper size matches canvas size.
+            
+            const x = parseInt(posXInput.value) * scale;
+            const y = parseInt(posYInput.value) * scale;
+            
+            // CSS Top/Left is from Top-Left. PDF Y is from Bottom-Left.
+            // We need the height of the canvas.
+            const canvasHeight = canvas.height;
+            
+            previewOverlay.style.left = `${x}px`;
+            previewOverlay.style.top = `${canvasHeight - y}px`;
+            
+            // Adjust transform origin for alignment logic if needed, 
+            // but simple absolute positioning usually works best with text-align inside the div
+            // provided the div width is constrained or auto.
+            // For right/center align to work visually in absolute pos, we might need to shift the div.
+            if (currentStyles.align === 'center') {
+                 // This is tricky with absolute div. Let's keep it simple: Left-aligned div, internal text aligned.
+                 // User positions the "start" of the text box.
+            }
+        }
+
+        async function generateAndDownloadPdf() {
+            if (!pdfBytes) return;
+            
+            try {
+                const { PDFDocument, rgb, StandardFonts } = PDFLib;
+                const pdfDocLib = await PDFDocument.load(pdfBytes);
+                const helveticaFont = await pdfDocLib.embedFont(StandardFonts.Helvetica);
+                const helveticaBold = await pdfDocLib.embedFont(StandardFonts.HelveticaBold);
+                const helveticaOblique = await pdfDocLib.embedFont(StandardFonts.HelveticaOblique);
+                const helveticaBoldOblique = await pdfDocLib.embedFont(StandardFonts.HelveticaBoldOblique);
+
+                const pages = pdfDocLib.getPages();
+                
+                // Iterate through all pages that have modifications
+                for (const [pageIndexStr, mods] of Object.entries(modifications)) {
+                    const pageIndex = parseInt(pageIndexStr) - 1; // 0-based index
+                    if (pageIndex < 0 || pageIndex >= pages.length) continue;
+                    
+                    const page = pages[pageIndex];
+                    const { width, height } = page.getSize();
+                    
+                    mods.forEach(mod => {
+                        // Select Font
+                        let font = helveticaFont;
+                        if (mod.bold && mod.italic) font = helveticaBoldOblique;
+                        else if (mod.bold) font = helveticaBold;
+                        else if (mod.italic) font = helveticaOblique;
                         
-                        // Determine font style
-                        let fontName = 'Helvetica';
-                        if(el.bold && el.italic) fontName = 'Helvetica-BoldOblique';
-                        else if(el.bold) fontName = 'Helvetica-Bold';
-                        else if(el.italic) fontName = 'Helvetica-Oblique';
-                        else fontName = 'Helvetica';
+                        // Parse Color
+                        const r = parseInt(mod.color.slice(1, 3), 16) / 255;
+                        const g = parseInt(mod.color.slice(3, 5), 16) / 255;
+                        const b = parseInt(mod.color.slice(5, 7), 16) / 255;
+                        const colorRgb = rgb(r, g, b);
                         
-                        const fontObj = await newDoc.embedFont(fontName);
-                        
-                        // Parse color
-                        const color = el.color || '#000000';
-                        const r = parseInt(color.slice(1,3),16)/255;
-                        const g = parseInt(color.slice(3,5),16)/255;
-                        const b = parseInt(color.slice(5,7),16)/255;
-                        
-                        // Draw text
-                        page.drawText(el.text || '', {
-                            x: el.x || 100,
-                            y: el.y || 500,
-                            size: el.size || 16,
-                            font: fontObj,
-                            color: PDFLib.rgb(r, g, b)
+                        // Draw Text
+                        // Note: pdf-lib coordinates are bottom-left based, which matches our input logic.
+                        page.drawText(mod.text, {
+                            x: mod.x,
+                            y: mod.y,
+                            size: mod.size,
+                            font: font,
+                            color: colorRgb,
+                            align: mod.align === 'center' ? 'center' : (mod.align === 'right' ? 'right' : 'left'),
                         });
                         
-                        // Draw underline separately if needed
-                        if(el.underline) {
-                            const textWidth = (el.text || '').length * (el.size || 16) * 0.55;
+                        // Handle Underline manually as pdf-lib doesn't support it natively in drawText options easily
+                        if (mod.underline) {
+                            // Approximate width calculation is hard without embedding a font subset or measuring.
+                            // pdf-lib has font.widthOfTextAtSize
+                            const textWidth = font.widthOfTextAtSize(mod.text, mod.size);
+                            const textHeight = font.heightAtSize(mod.size);
+                            
+                            let startX = mod.x;
+                            if (mod.align === 'center') startX = mod.x - (textWidth / 2);
+                            if (mod.align === 'right') startX = mod.x - textWidth;
+                            
                             page.drawLine({
-                                start: { x: el.x || 100, y: (el.y || 500) - 3 },
-                                end: { x: (el.x || 100) + textWidth, y: (el.y || 500) - 3 },
+                                start: { x: startX, y: mod.y - 2 }, // Slightly below baseline
+                                end: { x: startX + textWidth, y: mod.y - 2 },
                                 thickness: 1,
-                                color: PDFLib.rgb(r, g, b)
+                                color: colorRgb,
                             });
                         }
-                    } catch(e) {
-                        console.warn('Error drawing text:', e);
-                    }
+                    });
                 }
                 
-                newDoc.addPage(page);
+                const pdfDataUri = await pdfDocLib.saveAsBase64({ dataUri: true });
+                const link = document.createElement('a');
+                link.href = pdfDataUri;
+                link.download = 'edited-document.pdf';
+                link.click();
+                
+            } catch (err) {
+                console.error(err);
+                alert('Error generating PDF. Check console for details.');
             }
-            
-            const modifiedBytes = await newDoc.save();
-            pdfBytes = modifiedBytes;
-            
-            // Download
-            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'edited_document.pdf';
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-            
-            showToast('PDF downloaded successfully!', 'success');
-            hideLoading();
-        } catch(e) {
-            hideLoading();
-            showToast('Error: ' + e.message, 'error');
         }
-    }
 
-    // Update text count
-    function updateTextCount() {
-        const total = textElements.length;
-        const pageCount = textElements.filter(el => el.page === currentPage).length;
-        document.getElementById('textCount').textContent = `📝 ${total} total (${pageCount} on this page)`;
-    }
-
-    // Toast notification
-    function showToast(message, type) {
-        const box = document.getElementById('resultBox');
-        const colors = {
-            success: '#ecfdf5',
-            warning: '#fffbeb',
-            error: '#fef2f2',
-            info: '#eff6ff'
-        };
-        const textColors = {
-            success: '#065f46',
-            warning: '#92400e',
-            error: '#991b1b',
-            info: '#1e40af'
-        };
-        box.style.background = colors[type] || colors.info;
-        box.style.color = textColors[type] || textColors.info;
-        box.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle'}"></i> ${message}`;
-        box.classList.add('show');
-        setTimeout(() => box.classList.remove('show'), 3000);
-    }
-
-    function showLoading(msg) {
-        document.getElementById('loadingMessage').textContent = msg;
-        document.getElementById('loadingOverlay').style.display = 'flex';
-    }
-    function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        if(e.key === 'Delete' && selectedElement) {
-            deleteSelectedText();
-            e.preventDefault();
-        }
-        if(e.ctrlKey && e.key === 'b') { e.preventDefault(); applyStyle('bold'); }
-        if(e.ctrlKey && e.key === 'i') { e.preventDefault(); applyStyle('italic'); }
-        if(e.ctrlKey && e.key === 'u') { e.preventDefault(); applyStyle('underline'); }
-    });
-
-    // Initialize
-    document.getElementById('pageInfo').textContent = 'Page 1 of 1';
-    updateTextCount();
-</script>
+    </script>
 </body>
 </html>
