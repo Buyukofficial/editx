@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDFEditX - Mini Word for PDFs</title>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+        
+        .container { max-width: 1300px; margin: 0 auto; padding: 20px; }
+        
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 16px 24px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .logo i { color: #2563eb; }
+        .logo span { color: #2563eb; }
+        
+        .main-layout {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 20px;
+        }
+        
+        /* Left Panel - Controls */
+        .controls-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 20px;
+        }
+        .upload-area:hover { border-color: #2563eb; background: #f8faff; }
+        .upload-area i { font-size: 32px; color: #2563eb; margin-bottom: 10px; }
+        .upload-area p { font-size: 13px; color: #64748b; }
+        
+        .toolbar-section {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .toolbar-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .toolbar-section label { font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 8px; }
+        
+        .toolbar-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .toolbar-btn {
+            width: 36px;
+            height: 36px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .toolbar-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+        .toolbar-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+        
+        .toolbar-select {
+            padding: 6px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            background: white;
+            font-family: inherit;
+        }
+        .toolbar-select:focus { outline: none; border-color: #2563eb; }
+        
+        .color-picker {
+            width: 36px;
+            height: 36px;
+            padding: 2px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .text-input-area {
+            margin: 16px 0;
+        }
+        .text-input-area textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .text-input-area textarea:focus { outline: none; border-color: #2563eb; }
+        
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.2s;
+            width: 100%;
+        }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; transform: scale(0.98); }
+        .btn-success { background: #10b981; color: white; }
+        .btn-success:hover { background: #059669; transform: scale(0.98); }
+        .btn-outline { background: transparent; border: 2px solid #2563eb; color: #2563eb; }
+        
+        /* Right Panel - Preview */
+        .preview-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            min-height: 600px;
+        }
+        
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .preview-header h3 { font-size: 14px; font-weight: 600; color: #475569; }
+        
+        .preview-content {
+            min-height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .preview-content .empty-state {
+            text-align: center;
+            color: #94a3b8;
+        }
+        .preview-content .empty-state i { font-size: 48px; margin-bottom: 16px; }
+        .preview-content canvas {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .page-nav {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .page-nav button {
+            padding: 6px 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 30px;
+            background: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .page-nav button:hover { background: #f1f5f9; }
+        .page-nav span { font-size: 13px; display: flex; align-items: center; }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-content { background: white; padding: 30px; border-radius: 20px; text-align: center; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .result-box {
+            margin-top: 16px;
+            padding: 16px;
+            background: #ecfdf5;
+            border-radius: 12px;
+            text-align: center;
+            display: none;
+        }
+        .result-box.show { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .file-info {
+            font-size: 12px;
+            color: #64748b;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: none;
+        }
+        .file-info.show { display: block; }
+        
+        @media (max-width: 900px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .preview-panel { min-height: 400px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo"><i class="fas fa-file-pdf"></i> PDF<span>Edit</span>X</div>
+        <div style="font-size: 13px; color: #64748b;"><i class="fas fa-wand-magic-sparkles"></i> Mini Word for PDFs</div>
+    </div>
+
+    <div class="main-layout">
+        <!-- Left Panel -->
+        <div class="controls-panel">
+            <div class="upload-area" onclick="document.getElementById('pdfInput').click()">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Upload PDF to Edit</p>
+                <input type="file" id="pdfInput" accept=".pdf" style="display:none">
+            </div>
+            <div id="fileInfo" class="file-info">📄 <span id="fileName">No file loaded</span></div>
+
+            <!-- Font Controls -->
+            <div class="toolbar-section">
+                <label>Font Style</label>
+                <div class="toolbar-row">
+                    <select id="fontFamily" class="toolbar-select" style="flex:1; min-width:80px;">
+                        <option value="Arial">Arial</option>
+                        <option value="Times-Roman">Times New Roman</option>
+                        <option value="Helvetica">Helvetica</option>
+                        <option value="Courier">Courier</option>
+                        <option value="Helvetica-Bold">Helvetica Bold</option>
+                        <option value="Times-Bold">Times Bold</option>
+                    </select>
+                    <select id="fontSize" class="toolbar-select" style="width:60px;">
+                        <option value="8">8</option>
+                        <option value="10">10</option>
+                        <option value="12" selected>12</option>
+                        <option value="14">14</option>
+                        <option value="16">16</option>
+                        <option value="18">18</option>
+                        <option value="20">20</option>
+                        <option value="24">24</option>
+                        <option value="28">28</option>
+                        <option value="32">32</option>
+                        <option value="36">36</option>
+                        <option value="48">48</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Format Controls -->
+            <div class="toolbar-section">
+                <label>Formatting</label>
+                <div class="toolbar-row">
+                    <button class="toolbar-btn" id="btnBold" onclick="toggleFormat('bold')" title="Bold"><b>B</b></button>
+                    <button class="toolbar-btn" id="btnItalic" onclick="toggleFormat('italic')" title="Italic"><i>I</i></button>
+                    <button class="toolbar-btn" id="btnUnderline" onclick="toggleFormat('underline')" title="Underline"><u>U</u></button>
+                    <button class="toolbar-btn" id="btnStrike" onclick="toggleFormat('strike')" title="Strikethrough"><s>S</s></button>
+                    <input type="color" id="textColor" class="color-picker" value="#000000" title="Text Color">
+                    <input type="color" id="bgColor" class="color-picker" value="#ffffff" title="Background Color">
+                </div>
+            </div>
+
+            <!-- Alignment -->
+            <div class="toolbar-section">
+                <label>Alignment</label>
+                <div class="toolbar-row">
+                    <button class="toolbar-btn" id="alignLeft" onclick="setAlignment('left')"><i class="fas fa-align-left"></i></button>
+                    <button class="toolbar-btn" id="alignCenter" onclick="setAlignment('center')"><i class="fas fa-align-center"></i></button>
+                    <button class="toolbar-btn" id="alignRight" onclick="setAlignment('right')"><i class="fas fa-align-right"></i></button>
+                    <button class="toolbar-btn" id="alignJustify" onclick="setAlignment('justify')"><i class="fas fa-align-justify"></i></button>
+                </div>
+            </div>
+
+            <!-- Text Input -->
+            <div class="text-input-area">
+                <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 6px;">Your Text</label>
+                <textarea id="textContent" placeholder="Type your text here... It will appear on the PDF page.">Hello! This is a sample PDF document created with PDFEditX.
+
+You can format text with bold, italic, underline, different colors, and font sizes.
+
+This works just like a mini Word document!</textarea>
+            </div>
+
+            <!-- Position Controls -->
+            <div class="toolbar-section">
+                <label>Position on Page</label>
+                <div class="toolbar-row">
+                    <input type="number" id="posX" value="100" style="width:48%; padding:6px; border:1px solid #e2e8f0; border-radius:8px;" placeholder="X">
+                    <input type="number" id="posY" value="500" style="width:48%; padding:6px; border:1px solid #e2e8f0; border-radius:8px;" placeholder="Y">
+                </div>
+                <div style="margin-top:8px;">
+                    <select id="pageNumber" class="toolbar-select" style="width:100%;">
+                        <option value="1">Page 1</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <button class="btn btn-primary" id="applyBtn" onclick="applyTextToPDF()" disabled>
+                <i class="fas fa-pen"></i> Apply Text to PDF
+            </button>
+            <button class="btn btn-success" id="downloadBtn" onclick="downloadPDF()" style="margin-top:8px;" disabled>
+                <i class="fas fa-download"></i> Download PDF
+            </button>
+            <div id="resultBox" class="result-box"></div>
+        </div>
+
+        <!-- Right Panel - Preview -->
+        <div class="preview-panel">
+            <div class="preview-header">
+                <h3><i class="fas fa-eye"></i> PDF Preview</h3>
+                <span style="font-size: 12px; color: #94a3b8;" id="pageInfo">Page 1 / 1</span>
+            </div>
+            <div id="previewContent" class="preview-content">
+                <div class="empty-state">
+                    <i class="fas fa-file-pdf"></i>
+                    <p>Upload a PDF to see preview</p>
+                    <p style="font-size: 12px; margin-top: 8px;">Your text will appear on the selected page</p>
+                </div>
+            </div>
+            <div class="page-nav">
+                <button id="prevPage" onclick="changePage(-1)"><i class="fas fa-chevron-left"></i> Previous</button>
+                <span id="pageCounter">Page 1 of 1</span>
+                <button id="nextPage" onclick="changePage(1)">Next <i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+        <div class="spinner"></div>
+        <h3 id="loadingMessage">Processing...</h3>
+        <p id="loadingDetail">Please wait</p>
+    </div>
+</div>
+
+<script>
+    let pdfDoc = null;
+    let currentPage = 1;
+    let totalPages = 0;
+    let pdfBytes = null;
+    let currentFile = null;
+    let isBold = false, isItalic = false, isUnderline = false, isStrike = false;
+    let alignment = 'left';
+
+    // PDF.js for preview
+    const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+    // Upload PDF
+    document.getElementById('pdfInput').onchange = async function(e) {
+        if(!e.target.files[0]) return;
+        currentFile = e.target.files[0];
+        document.getElementById('fileName').textContent = currentFile.name;
+        document.getElementById('fileInfo').classList.add('show');
+        document.getElementById('applyBtn').disabled = false;
+        
+        const arrayBuffer = await currentFile.arrayBuffer();
+        pdfBytes = arrayBuffer;
+        pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+        totalPages = pdfDoc.getPageCount();
+        
+        // Update page selector
+        const pageSelect = document.getElementById('pageNumber');
+        pageSelect.innerHTML = '';
+        for(let i = 1; i <= totalPages; i++) {
+            pageSelect.innerHTML += `<option value="${i}">Page ${i}</option>`;
+        }
+        
+        // Show preview
+        await renderPreview();
+        document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('pageInfo').textContent = `Page 1 / ${totalPages}`;
+        document.getElementById('pageCounter').textContent = `Page 1 of ${totalPages}`;
+    };
+
+    // Render preview
+    async function renderPreview() {
+        if(!currentFile) return;
+        const container = document.getElementById('previewContent');
+        container.innerHTML = '<div style="text-align:center; padding:20px;"><div class="spinner" style="width:30px; height:30px;"></div><p>Loading preview...</p></div>';
+        
+        try {
+            const arrayBuffer = await currentFile.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(currentPage);
+            const viewport = page.getViewport({ scale: 1.2 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const context = canvas.getContext('2d');
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            container.innerHTML = '';
+            container.appendChild(canvas);
+            document.getElementById('pageCounter').textContent = `Page ${currentPage} of ${totalPages}`;
+        } catch(e) {
+            container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading preview</p></div>`;
+        }
+    }
+
+    function changePage(delta) {
+        const newPage = currentPage + delta;
+        if(newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            document.getElementById('pageNumber').value = currentPage;
+            renderPreview();
+        }
+    }
+
+    // Formatting functions
+    function toggleFormat(type) {
+        const btnMap = {
+            bold: 'btnBold',
+            italic: 'btnItalic',
+            underline: 'btnUnderline',
+            strike: 'btnStrike'
+        };
+        const stateMap = {
+            bold: 'isBold',
+            italic: 'isItalic',
+            underline: 'isUnderline',
+            strike: 'isStrike'
+        };
+        
+        window[stateMap[type]] = !window[stateMap[type]];
+        const btn = document.getElementById(btnMap[type]);
+        btn.classList.toggle('active');
+        updateTextAreaFormatting();
+    }
+
+    function setAlignment(type) {
+        alignment = type;
+        ['alignLeft', 'alignCenter', 'alignRight', 'alignJustify'].forEach(id => {
+            document.getElementById(id).classList.remove('active');
+        });
+        const btnMap = { left: 'alignLeft', center: 'alignCenter', right: 'alignRight', justify: 'alignJustify' };
+        document.getElementById(btnMap[type]).classList.add('active');
+    }
+
+    function updateTextAreaFormatting() {
+        const textarea = document.getElementById('textContent');
+        // Just visual feedback - we apply formatting during PDF generation
+        let style = '';
+        if(isBold) style += 'bold ';
+        if(isItalic) style += 'italic ';
+        if(isUnderline) style += 'underline ';
+        if(isStrike) style += 'line-through ';
+        textarea.style.fontWeight = isBold ? 'bold' : 'normal';
+        textarea.style.fontStyle = isItalic ? 'italic' : 'normal';
+        textarea.style.textDecoration = isUnderline ? 'underline' : (isStrike ? 'line-through' : 'none');
+    }
+
+    // Apply text to PDF
+    async function applyTextToPDF() {
+        if(!pdfDoc) { alert('Please upload a PDF first'); return; }
+        
+        const text = document.getElementById('textContent').value;
+        if(!text) { alert('Please enter some text'); return; }
+        
+        const fontFamily = document.getElementById('fontFamily').value;
+        const fontSize = parseInt(document.getElementById('fontSize').value) || 12;
+        const color = document.getElementById('textColor').value;
+        const bgColor = document.getElementById('bgColor').value;
+        const x = parseInt(document.getElementById('posX').value) || 100;
+        const y = parseInt(document.getElementById('posY').value) || 500;
+        const pageNum = parseInt(document.getElementById('pageNumber').value) || 1;
+        
+        // Convert colors to RGB
+        const rgb = {
+            r: parseInt(color.slice(1,3),16)/255,
+            g: parseInt(color.slice(3,5),16)/255,
+            b: parseInt(color.slice(5,7),16)/255
+        };
+        const bgRgb = {
+            r: parseInt(bgColor.slice(1,3),16)/255,
+            g: parseInt(bgColor.slice(3,5),16)/255,
+            b: parseInt(bgColor.slice(5,7),16)/255
+        };
+        
+        showLoading('Applying text to PDF...');
+        
+        try {
+            const newDoc = await PDFLib.PDFDocument.create();
+            const pages = await newDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
+            
+            // Build text with formatting
+            let displayText = text;
+            
+            for(let i = 0; i < pages.length; i++) {
+                const page = pages[i];
+                const { width, height } = page.getSize();
+                
+                // Only apply to selected page
+                if(i === pageNum - 1) {
+                    // Draw background if not white
+                    if(bgColor !== '#ffffff') {
+                        page.drawRectangle({
+                            x: x - 10,
+                            y: y - fontSize - 10,
+                            width: displayText.length * (fontSize * 0.6) + 20,
+                            height: fontSize + 20,
+                            color: PDFLib.rgb(bgRgb.r, bgRgb.g, bgRgb.b),
+                        });
+                    }
+                    
+                    // Draw text with formatting
+                    let finalText = displayText;
+                    
+                    // Build font string
+                    let fontName = fontFamily;
+                    if(isBold && isItalic) fontName = `${fontFamily}-BoldOblique`;
+                    else if(isBold) fontName = `${fontFamily}-Bold`;
+                    else if(isItalic) fontName = `${fontFamily}-Oblique`;
+                    
+                    // Draw text
+                    page.drawText(finalText, {
+                        x: x,
+                        y: y,
+                        size: fontSize,
+                        font: await newDoc.embedFont(fontName),
+                        color: PDFLib.rgb(rgb.r, rgb.g, rgb.b),
+                    });
+                }
+                newDoc.addPage(page);
+            }
+            
+            // Store the modified PDF
+            const modifiedBytes = await newDoc.save();
+            pdfBytes = modifiedBytes;
+            pdfDoc = await PDFLib.PDFDocument.load(modifiedBytes);
+            
+            // Update preview
+            await renderPreview();
+            
+            document.getElementById('resultBox').innerHTML = `<div><i class="fas fa-check-circle" style="font-size:24px; color:#10b981;"></i><p style="margin-top:8px;">Text applied successfully! Click Download to save.</p></div>`;
+            document.getElementById('resultBox').classList.add('show');
+            document.getElementById('downloadBtn').disabled = false;
+            
+            incrementProcessed();
+            hideLoading();
+        } catch(e) {
+            alert('Error: ' + e.message);
+            hideLoading();
+        }
+    }
+
+    // Download PDF
+    function downloadPDF() {
+        if(!pdfBytes) { alert('No PDF to download'); return; }
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'edited.pdf';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    }
+
+    // Helper functions
+    function showLoading(msg) {
+        document.getElementById('loadingMessage').textContent = msg;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+    function hideLoading() { document.getElementById('loadingOverlay').style.display = 'none'; }
+    
+    let processedCount = parseInt(localStorage.getItem('pdfeditx_processed') || '0');
+    function incrementProcessed() {
+        processedCount++;
+        localStorage.setItem('pdfeditx_processed', processedCount);
+    }
+
+    // Initialize active states
+    document.getElementById('alignLeft').classList.add('active');
+    updateTextAreaFormatting();
+
+    // Page number change updates preview
+    document.getElementById('pageNumber').onchange = function() {
+        currentPage = parseInt(this.value);
+        renderPreview();
+    };
+
+    // Color picker preview
+    document.getElementById('textColor').oninput = function() {
+        // Just update visual
+    };
+</script>
+</body>
+</html>
